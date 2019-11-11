@@ -31,6 +31,7 @@ func main() {
 }
 
 func mset(session *gocql.Session) {
+	var total = int64(0)
 	for j := 0; j < 2000000; j++ {
 		begin := "BEGIN BATCH"
 		end := "APPLY BATCH"
@@ -48,7 +49,8 @@ func mset(session *gocql.Session) {
 		}
 		endTime := time.Now().UnixNano()
 		deltaTime := (endTime - startTime) / 1000000
-		s := fmt.Sprintf("MSET 第 %d 次， 时间：%d ms", j, deltaTime)
+		total = total + deltaTime
+		s := fmt.Sprintf("MSET 第 %d 次， 时间：%d ms, 平均时间: %d ms", j, deltaTime, total/int64(j+1))
 		fmt.Println(s)
 	}
 }
