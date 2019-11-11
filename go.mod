@@ -1,4 +1,4 @@
-module scyllabench
+module github.com/mysunnyshine/scyllabench
 
 go 1.13
 

@@ -61,8 +61,7 @@ func mget(session *gocql.Session) {
 		query := ""
 		args := make([]interface{}, 0)
 		for i := 0; i < mgetNum; i++ {
-			rand.Seed(time.Now().UnixNano())
-			n := rand.Intn(randNum)
+			n := RandInt64(1400000000, 1700000000)
 			var qs = ""
 			if i == 0 {
 				qs = fmt.Sprintf("SELECT id FROM example.large WHERE id in (?")
@@ -87,4 +86,13 @@ func mget(session *gocql.Session) {
 		time.Sleep(time.Second * 1)
 	}
 
+}
+
+
+func RandInt64(min, max int64) int64 {
+	rand.Seed(time.Now().UnixNano())
+	if min >= max || min == 0 || max == 0 {
+		return max
+	}
+	return rand.Int63n(max-min) + min
 }
