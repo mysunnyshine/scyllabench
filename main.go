@@ -11,10 +11,10 @@ import "github.com/gocql/gocql"
 
 /* Before you execute the program, Launch `cqlsh` and execute:
 create keyspace demo with replication = { 'class' : 'SimpleStrategy', 'replication_factor' : 3 };
-create table demo.large(id int, value text, PRIMARY KEY(id));
+create table demo.kv(id int, value text, PRIMARY KEY(id));
 */
 
-var msetNum = 100
+var msetNum = 200
 var mgetNum = 2000
 var randNum = 2000000
 
@@ -26,8 +26,8 @@ func main() {
 	session, _ := cluster.CreateSession()
 
 	defer session.Close()
-	mset(session)
-	//mget(session)
+	//mset(session)
+	mget(session)
 
 }
 
@@ -39,7 +39,7 @@ func mset(session *gocql.Session) {
 		query := ""
 		args := make([]interface{}, 0)
 		for i := 0; i < msetNum; i++ {
-			query = query + "INSERT INTO large (id, value) VALUES (?, ?);"
+			query = query + "INSERT INTO kv (id, value) VALUES (?, ?);"
 			args = append(args, msetNum*j+i)
 			args = append(args, strconv.Itoa(msetNum*j+i))
 		}
@@ -54,6 +54,7 @@ func mset(session *gocql.Session) {
 		total = total + deltaTime
 		s := fmt.Sprintf("MSET 第 %d 次， 时间：%d ms, 平均时间: %d ms", j, deltaTime, total/int64(j+1-9000000))
 		fmt.Println(s)
+		time.Sleep(time.Second * 4)
 	}
 }
 
@@ -63,10 +64,11 @@ func mget(session *gocql.Session) {
 		query := ""
 		args := make([]interface{}, 0)
 		for i := 0; i < mgetNum; i++ {
-			n := RandInt64(900000000, 900002800)
+			n := RandInt(0, 50000000)
+			fmt.Println("rand n =", n)
 			var qs = ""
 			if i == 0 {
-				qs = fmt.Sprintf("SELECT id, value FROM demo.large WHERE id in (?")
+				qs = fmt.Sprintf("SELECT id, value FROM demo.kv WHERE id in (?")
 			} else {
 				qs = ",?"
 			}
@@ -82,21 +84,23 @@ func mget(session *gocql.Session) {
 		iter := session.Query(fullQuery, args...).Iter()
 
 		for iter.Scan(&id, &value) {
+			fmt.Print("id, value = ", id, value)
 		}
 		endTime := time.Now().UnixNano()
 		deltaTime := (endTime - startTime) / 1000000
 		total = total + deltaTime
 		s := fmt.Sprintf("MGET 第 %d 次， 时间：%d ms, 平均时间: %d ms", j, deltaTime, total/int64(j))
 		fmt.Println(s)
+		time.Sleep(time.Second * 5)
 	}
 
 }
 
 
-func RandInt64(min, max int64) int64 {
+func RandInt(min, max int) int {
 	rand.Seed(time.Now().UnixNano())
-	if min >= max || min == 0 || max == 0 {
+	if min >= max {
 		return max
 	}
-	return rand.Int63n(max-min) + min
+	return rand.Intn(max-min) + min
 }
