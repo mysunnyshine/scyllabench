@@ -26,24 +26,48 @@ func main() {
 	cluster.Consistency = gocql.Quorum
 	session, _ := cluster.CreateSession()
 	sessions := make([]*gocql.Session, 0)
-	for i := 0; i < goNums; i++{
+/*	for i := 0; i < goNums; i++{
 		session1, e1 := cluster.CreateSession()
 		if e1 != nil {
 			fmt.Println("err", e1)
 		}
 		fmt.Println("session = ", session1)
 		sessions = append(sessions, session1)
-	}
+	}*/
 	defer func() {
 		session.Close()
 		for _, s := range sessions{
 			s.Close()
 		}
 	}()
-	mset(session)
+	set(session)
+	//get(session)
+	//mset(session)
 	//mget(sessions)
 
 }
+
+func set(session *gocql.Session) {
+	var total = int64(0)
+	for j := 150000000; j <= 150500000; j++ {
+		query := ""
+		args := make([]interface{}, 0)
+		query = query + "INSERT INTO kv (id, value) VALUES (?, ?);"
+		args = append(args, j)
+		args = append(args, strconv.Itoa(j))
+		startTime := time.Now().UnixNano()
+		if err := session.Query(query, args...).Exec(); err != nil {
+			fmt.Println("err occured", err)
+		}
+		endTime := time.Now().UnixNano()
+		deltaTime := (endTime - startTime) / 1000000
+		total = total + deltaTime
+		s := fmt.Sprintf("SET 第 %d 次， 时间：%d ms, 平均时间: %d ms", j, deltaTime, total/int64(j+1-150000000))
+		fmt.Println(s)
+	}
+}
+
+
 
 func mset(session *gocql.Session) {
 	var total = int64(0)
@@ -71,26 +95,27 @@ func mset(session *gocql.Session) {
 	}
 }
 
-func mget(sessions []*gocql.Session) {
+func get(session *gocql.Session) {
 	var total = int64(0)
-	for j := 1; j <= randNum; j++ {
-		wg := sync.WaitGroup{}
+	for j := 0; j < 1000000; j++ {
+		n := RandInt(150000000, 150500000)
+		args := make([]interface{}, 0)
+		args = append(args, n)
+		fmt.Println("n", n)
+		qs := fmt.Sprintf("SELECT id, value FROM demo.kv WHERE id = ?")
+		var id int
+		var value string
 		startTime := time.Now().UnixNano()
-		fmt.Println("startTime = ", startTime)
-		for c := 0; c < goNums; c ++ {
-			session := sessions[c]
-			wg.Add(1)
-			go batchGet(session, &wg)
+		if err := session.Query(qs, args...).Scan(&id, &value); err != nil{
+			fmt.Println("## err happened ##", err)
 		}
-		wg.Wait()
 		endTime := time.Now().UnixNano()
-		fmt.Println("endTime = ", endTime)
 		deltaTime := (endTime - startTime) / 1000000
 		total = total + deltaTime
-		s := fmt.Sprintf("MGET 第 %d 次， 时间：%d ms, 平均时间: %d ms", j, deltaTime, total/int64(j))
+		s := fmt.Sprintf("GET 第 %d 次， 时间：%d ms, 平均时间: %d ms", j, deltaTime, total/int64(j + 1))
 		fmt.Println(s)
-		time.Sleep(time.Second * 5)
 	}
+
 }
 
 
